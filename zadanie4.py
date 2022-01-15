@@ -197,7 +197,7 @@ if __name__ == '__main__':
     print(f'm92: {m92}, K92: {K92}')
     print(f'm2k: {m2k}, K2k: {K2k}')
     print('')  # \n
-    print(f'm^2 gk: {mgk**2}, K^2 gk: {(1-mgk**2)*10000}')
-    print(f'm^2 92: {m92**2}, K^2 92: {(1-m92**2)*10000}')
-    print(f'm^2 2k: {m2k**2}, K^2 2k: {(1-m2k**2)*10000}')
+    print(f'm^2 gk: {round(mgk**2, 3)}, K^2 gk: {round((1-mgk**2)*10000, 3)}')
+    print(f'm^2 92: {round(m92**2, 3)}, K^2 92: {round((1-m92**2)*10000, 3)}')
+    print(f'm^2 2k: {round(m2k**2, 3)}, K^2 2k: {round((1-m2k**2)*10000, 3)}')
     
