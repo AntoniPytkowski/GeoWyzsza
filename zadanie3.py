@@ -1,140 +1,129 @@
-# todo: dostajemy dane fi la
-# todo: najpierw przeliczamy na G-K
-# todo: mamy przeliczyc na 2k i 92 z G-K
-# todo: i w druga strone xd
+from numpy import *
 
-from math import *
-
-# globals
 a = 6378137
 e2 = 0.00669437999013
-b = sqrt((1 - e2) * a**2)
-ep2 = (a**2 - b**2)/b**2
+b = a * sqrt((1 - e2))
 
+def naRad(st, m=0.0, s=0.0):
+    return (st + m/60 + s/3600) * pi/180
 
 def liczM(fi):
     return a * (1 - e2) / (sqrt(1 - e2 * (sin(fi)) ** 2)) ** 3
 def liczN(fi):
     return a / sqrt(1 - e2 * (sin(fi)) ** 2)
 
-def naRad(st, m=0.0, s=0.0):
-    r = st + m / 60 + s / 3600
-    return r * pi / 180
+def pole(f1, l1, f2, l2):
+    def c(f):
+        e1 = sqrt(e2)
+        sf = sin(f)
+        return sf/(1-e2*sf**2) + (1/(2*e1))*log((1+e1*sf)/(1-e1*sf))
+
+    return round(abs(((b**2)*(l2-l1)/2) * (c(f2) - c(f1))), 3)
+
+def kivioj(fi, la, s, az):
+    n = int(s/1000)
+    ds = s / n
+    for i in range(0, n):
+        M = liczM(fi)
+        N = liczN(fi)
+        Dfi = ds * cos(az) / M
+        fiM = fi + 0.5*Dfi
+        M = liczM(fiM)
+        N = liczN(fiM)
+        azM = az + ds*sin(az)*tan(fiM)/N
+
+        Dfi = ds*cos(azM)/M
+        fi += Dfi
+        Dla = ds*sin(azM)/(N*cos(fiM))
+        la += Dla
+        Daz = ds*sin(azM)*tan(fiM)/N
+        az += Daz
+
+    return fi, la, az+pi
 
 
-# dane
-phi = naRad(51, 42, 3.70702)
-lam = naRad(18, 10, 31.66445)
-print(f'phi: {round(phi*180/pi, 12)}\nlam: {round(lam*180/pi, 12)}')
+def vincent(fiA, laA, fiB, laB):
+    f = 1 - b / a
+    dLa = laB - laA
+    UA = arctan((1 - f) * tan(fiA))
+    UB = arctan((1 - f) * tan(fiB))
+    L = dLa
 
-class Sigma:
-    def __init__(self, fi=None):
-        self.A0 = 1 - e2/4 - 3*e2**2/64 - 5*e2**3/256
-        self.A2 = 3*(e2 + e2**2/4 + 15*e2**3/128)/8
-        self.A4 = 15*(e2**2 + 3*e2**3/4)/256
-        self.A6 = 35*e2**3/3072
-        if fi is not None:
-            self.sigma = a*(self.A0*fi - self.A2*sin(2*fi) + self.A4*sin(4*fi) - self.A6*sin(6*fi))
-
-def GaussKruger(fi, la, L0, acc=3, show=False):
-    L0 *= pi/180
-    o = Sigma(fi).sigma
-    t = tan(fi)
-    n2 = ep2 * cos(fi)**2
-    l = la - L0
-    Xgk = o + 0.5*l**2*liczN(fi)*sin(fi)*cos(fi)*(1 + l**2/12*cos(fi)**2*(5 - t**2 + 9*n2 + 4*n2**2) + l**4/360*cos(fi)**4*(61 - 58*t**2 + t**4 + 270*n2 - 330*n2*t**2))
-    Ygk = l*liczN(fi)*cos(fi)*(1 + l**2/6*cos(fi)**2*(1 - t**2 + n2) + l**4/120*cos(fi)**4*(5 - 18*t**2 + t**4 + 14*n2 - 58*n2*t**2))
-    Xgk = round(Xgk, acc)
-    Ygk = round(Ygk, acc)
-    if show:
-        print(f'Xgk: {Xgk}\nYgk: {Ygk}')
-    return Xgk, Ygk
-
-
-def FLto92(fi, la, acc=3, show=False):
-    Xgk, Ygk = GaussKruger(fi, la, 19, show=show)
-    x92 = 0.9993*Xgk - 5300000
-    y92 = 0.9993*Ygk + 500000
-    x92 = round(x92, acc)
-    y92 = round(y92, acc)
-    if show:
-        print(f'x92: {x92}\ny92: {y92}')
-    return x92, y92  # obie wartosci sa za duze o tyle samo: 0.000999...
-
-
-def strefa(la):
-    la *= 180/pi
-    la += 0.5
-    la = int(la)
-    return la/3
-
-def FLto2k(fi, la, acc=3, show=False):
-    nrS = strefa(lam)
-    Xgk, Ygk = GaussKruger(fi, la, nrS*3, show=show)
-    x2k = 0.999923*Xgk
-    y2k = 0.999923*Ygk + 500000 + nrS*1000000
-    x2k = round(x2k, acc)
-    y2k = round(y2k, acc)
-    if show:
-        print(f'x2k: {x2k}\ny2k: {y2k}')
-    return x2k, y2k
-
-
-def GKtoFL(x, y, L0, acc=12, show=False):
-    mianow = a*Sigma().A0
-    fi1 = x/mianow
-    o = Sigma(fi1).sigma
-
-    eps = naRad(0, 0, 0.000001)
     while True:
-        old = fi1
-        fi1 += (x - o)/mianow
-        o = Sigma(fi1).sigma
-
-        if abs(old-fi1) < eps:
+        sinO = sqrt((cos(UB) * sin(L)) ** 2 + (cos(UA)*sin(UB) - sin(UA) * cos(UB) * cos(L)) ** 2)
+        cosO = sin(UA) * sin(UB) + cos(UA) * cos(UB) * cos(L)
+        O = arctan((sinO / cosO))
+        sina = (cos(UA) * cos(UB) * sin(L)) / sinO
+        cos2a = 1 - sina ** 2
+        cos2Om = cosO - 2 * sin(UA) * sin(UB) / cos2a
+        C = f * cos2a * (4 + f * (4 - 3 * cos2a)) / 16
+        oldL = L
+        L = dLa + (1 - C) * f * sina * (O + C * sinO * (cos2Om + C * cosO * (2 * cos2Om ** 2 - 1)))
+        if abs(L - oldL) < naRad(0, 0, 0.000001):
             break
 
-    N = liczN(fi1)
-    M = liczM(fi1)
-    t = tan(fi1)
-    n2 = ep2 * cos(fi1) ** 2
+    u2 = (a**2 - b**2)*cos2a/b**2
+    A = 1 + u2*(4096 + u2*(-768 + u2*(320 - 175*u2))) / 16384
+    B = u2*(256 + u2*(-128 + u2*(74 - 47*u2))) / 1024
+    dO = B*sinO*(cos2Om + (1/4)*B*(cosO*(-1 + 2*cos2Om**2) - (1/6)*B*cos2Om*(-3 + 4*sinO**2)*(-3 + 4*cos2Om**2)))
+    s = b*A*(O - dO)
 
-    fi = fi1 - y**2*t/(2*M*N)*(1 - y**2/(12*N**2)*(5+3*t**2+n2-9*n2*t**2-4*n2**2) + y**4/(360*N**4)*(61+90*t**2+45*t**4))
-    la = L0*pi/180 + y/(N*cos(fi1))*(1 - y**2/(6*N**2)*(1+2*t**2+n2) + y**4/(120*N**4)*(5+28*t**2+24*t**4+6*n2+8*n2*t**2))
-    fi *= 180/pi
-    la *= 180/pi
+    def azymut(dy, dx):
+        ret = arctan(dy/dx)
+        if dx < 0:
+            ret += pi
+        elif dy < 0:
+            ret += 2*pi
+        return ret
 
-    fi = round(fi, acc)
-    la = round(la, acc)
-    if show:
-        print(f'fi: {fi}\nla: {la}')
-    return fi, la
-
-
-def u92toFL(x, y, acc=12, show=False):
-    Xgk = (x+5300000)/0.9993
-    Ygk = (y-500000)/0.9993
-    return GKtoFL(Xgk, Ygk, 19, acc=acc, show=show)
+    Az1 = azymut(cos(UB)*sin(L), (cos(UA)*sin(UB) - sin(UA)*cos(UB)*cos(L)))
+    Az2 = azymut(cos(UA)*sin(L), (-sin(UA)*cos(UB) + cos(UA)*sin(UB)*cos(L))) + pi
+    return round(s, 3), round(Az1, 6), round(Az2, 6)
 
 
-# TODO
-def u2ktoFL(x, y, acc=12, show=False):
-    Xgk = x / 0.999923
-    L0 = int((y-500000)/1000000)*3
-    Ygk = (y - 500000) % 1000000 / 0.999923
-    return GKtoFL(Xgk, Ygk, L0, acc=acc, show=show)
+if __name__ == '__main__':
+    def dms(rad):
+        dg = rad*180/pi
+        d = int(dg)
+        dg -= d
+        dg *= 60
+        m = int(dg)
+        dg -= m
+        dg *= 60
+        s = round(dg, 5)
 
+        def f(i):
+            if i >= 10:
+                return str(i)
+            elif 0 < i < 10:
+                return '0'+str(i)
+            else:
+                return '00'
 
-xx, yy = FLto2k(phi, lam, show=True)
-ff, ll = u2ktoFL(xx, yy, show=True)
+        d = f(d)
+        m = f(m)
+        s = f(s)
 
-# φ=51°42'3.70702"
-# λ=18°10'31.66445"
-#
-# współrzędne przeliczone:
-#
-# 2000:
-# x=5729652.129 y=6512129.578
-#
-# 1992:
-# x=426389.392 y=443036.288
+        return d+'°'+m+"'"+s+"\""
+
+    from random import randint
+    nr = randint(0, 15)
+    print('nr', nr)
+    fiA = naRad(50, 15 + nr * 15)
+    laA = naRad(20, 45)
+    fiC = naRad(50, 15 + nr * 15)
+    laC = naRad(21, 15)
+    fiB = naRad(50, 0 + nr * 15)
+    laB = naRad(20, 45)
+    fiD = naRad(50, 0 + nr * 15)
+    laD = naRad(21, 15)
+
+    sAD, AzAD, AzDA = vincent(fiA, laA, fiD, laD)
+    Fk, Lk, Ak = kivioj(fiA, laA, sAD/2, AzAD)
+
+    print(f'pkt średni   fi: {dms((fiA + fiD) / 2)}, lam: {dms((laA+laD)/2)}')
+    print(f'pkt środkowy fi: {dms(Fk)}, lam: {dms(Lk)}')
+
+    d, A1, A2 = vincent((fiA+fiD)/2, (laA+laD)/2, Fk, Lk)
+    print(f'odległość: {d}\nazymuty: {dms(A1)}, {dms(A2)}')
+    print('pole:', pole(fiA, laA, fiD, laD))
