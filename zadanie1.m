@@ -1,4 +1,5 @@
 clc
+clear
 global a
 a = 6378137; 
 global e2
@@ -8,15 +9,14 @@ macierzDane = load('flight.txt');
 phi = macierzDane(:,1)*pi()/180;  %zamiana na rad
 lambda = macierzDane(:,2)*pi()/180;  %zamiana na rad
 h = macierzDane(:,3); 
-%wsp lotniska 
+%wsp lotniska
 phiB = phi(1);
 lambdaB = lambda(1);
 hB = h(1);
 
 neu = [0, 0, 0];
 
-i = 2;
-while i <= 1909
+for i=2:1909
     Xij = geo_neu(phi(i), lambda(i), h(i), phiB, lambdaB, hB);
     neu = [neu; Xij];
     i = i+1;
@@ -26,15 +26,23 @@ n = neu(:,1);
 e = neu(:,2);
 u = neu(:,3);
 
-i = 2;
-while i <= 1909
-    [A, s, z] = neu_asz(n(i), n(i), u(i));
-    asz = [asz; A, s, z];
-    i = i+1;
+[A1, s1, z1] = neu_asz(n(1), e(1), u(1));
+Asz = [A1, s1, z1];
+
+for i=2:1909
+    [Ai, si, zi] = neu_asz(n(i), e(i), u(i));
+    Asz = [Asz; Ai, si, zi];
 end
 
+i = 2;
+while i <= 1909
+    if u(i) <= 0, break;end
+    i=i+1;
+end
+wspolrzedne_neu_gdy_samolot_znika_za_horyzontem = neu(3,:)
+
 % rysowanie
-geoscatter(phi,lambda,5, 'ro')
+geoscatter(phi*180/pi,lambda*180/pi,5, 'ro')
 plot3(n, e, u)
 
 
@@ -66,7 +74,7 @@ function Xij = geo_neu(f1, l1, h1, f2, l2, h2)
 end
 
 function [A, s, z] = neu_asz(n, e, u)
-    A = atan(e/n)
-    s = sqrt(n*n + e*e + u*u)
-    z = acos(u/s)
+    A = atan(e/n);
+    s = sqrt(n*n + e*e + u*u);
+    z = acos(u/s);
 end
