@@ -135,6 +135,28 @@ def u2ktoFL(x, y, show=False):
     return GKtoFL(Xgk, Ygk, L0, show=show)
 
 
+# def mKappa(m0, y, R):
+#     m = 1 + y**2/(2*R**2) + y**4/(24*R**4)
+#     m *= m0
+#     K = (1 - m) * 1000
+#     return round(m, 6), round(K, 3)
+#
+
+# klasa
+class Punkt:
+    def __init__(self, fi, la):
+        self.fi, self.la = fi, la
+        self.xgk, self.ygk = GaussKruger(fi, la, 19)
+        self.x92, self.y92 = FLto92(fi, la)
+        self.x2k, self.y2k = FLto2k(fi, la)
+        R = sqrt(liczM(self.fi) * liczN(self.fi))
+        self.m = 1 + self.ygk**2/(2*R**2) + self.ygk**4/(24*R**4)
+
+    def __repr__(self):
+        return f"fi: {dms(self.fi)}, la: {dms(self.la)}\nXgk: {self.xgk}, Ygk: {self.ygk}\n" \
+               f"x92: {self.x92}, y92: {self.y92}\nx2k: {self.x2k}, y2k: {self.y2k}"
+
+
 if __name__ == '__main__':
     nr = 9  # z poprzedniego zadania
     fiA = naRad(50, 15 + nr * 15)
@@ -150,27 +172,15 @@ if __name__ == '__main__':
     laSrednie = naRad(21)
     fiSrodkowe = naRad(52, 22, 30.91097)
     laSrodkowe = naRad(21, 0, 02.48014)
-    
-    class Punkt:
-        def __init__(self, fi, la):
-            self.fi, self.la = fi, la
-            self.xgk, self.ygk = 0.0, 0.0
-            self.x92, self.y92 = 0.0, 0.0
-            self.x2k, self.y2k = 0.0, 0.0
-            
 
     pkts = [Punkt(fiA, laA), Punkt(fiB, laB), Punkt(fiC, laC), Punkt(fiD, laD), 
             Punkt(fiSrednie, laSrednie), Punkt(fiSrodkowe, laSrodkowe)]
 
     for p in pkts:
-        print(f"fi: {dms(p.fi)}, la: {dms(p.la)}")
-        p.x92, p.y92 = FLto92(p.fi, p.la, show=True)
-        p.x2k, p.y2k = FLto2k(p.fi, p.la, show=True)
+        print(p)
     print('')  # \n
 
     print('poleFL:', 947260271.645)
-    pkts[0].xgk, pkts[0].ygk = GaussKruger(fiA, laA, 19)
-    pkts[3].xgk, pkts[3].ygk = GaussKruger(fiD, laD, 19)
 
     def simplePole(x1, y1, x2, y2):
         return round(abs((x2-x1)*(y2-y1)), 3)
@@ -180,24 +190,14 @@ if __name__ == '__main__':
     print('pole2k:', simplePole(pkts[0].x2k, pkts[0].y2k, pkts[3].x2k, pkts[3].y2k))
     print('')  # \n
 
-    def mkappa(m0, L0):
-        B, L = pkts[-1].fi, pkts[-1].la
-        t2 = tan(B)**2
-        l = L - L0
-        n2 = ep2 * cos(B)**2
-        m = 1 + l**2/2 * cos(B)**2 * (1+n2) + l**4/24 * cos(B)**4 * (5-4*t2)
-        m *= m0
-        K = (1 - m) * 1000
-        return round(m, 3), round(K, 3)
-
-    mgk, Kgk = mkappa(1, 19)
-    m92, K92 = mkappa(0.9993, 19)
-    m2k, K2k = mkappa(0.999923, 3*strefa(pkts[-1].la))
-    print(f'mgk: {mgk}, Kgk: {Kgk}')
-    print(f'm92: {m92}, K92: {K92}')
-    print(f'm2k: {m2k}, K2k: {K2k}')
+    for p in pkts:
+        print(f'mGK: {round(p.m, 6)}, Kgk: {round((p.m-1)*1000, 3)}')
+        print(f'm92: {round(p.m*0.9993, 6)}, K92: {round((p.m*0.9993-1)*1000, 3)}')
+        print(f'm2k: {round(p.m*0.999923, 6)}, K2k: {round((p.m*0.999923-1)*1000, 3)}')
     print('')  # \n
-    print(f'm^2 gk: {round(mgk**2, 3)}, K^2 gk: {round((1-mgk**2)*10000, 3)}')
-    print(f'm^2 92: {round(m92**2, 3)}, K^2 92: {round((1-m92**2)*10000, 3)}')
-    print(f'm^2 2k: {round(m2k**2, 3)}, K^2 2k: {round((1-m2k**2)*10000, 3)}')
-    
+
+    for p in pkts:
+        m2 = p.m**2
+        print(f'm^2 GK: {round(m2, 6)}, K^2 gk: {round((m2 - 1) * 10000, 2)}')
+        print(f'm^2 92: {round(m2 * 0.9993**2, 6)}, K^2 92: {round((m2 * 0.9993**2 - 1) * 10000, 2)}')
+        print(f'm^2 2k: {round(m2 * 0.999923**2, 6)}, K^2 2k: {round((m2 * 0.999923**2 - 1) * 10000, 2)}')
